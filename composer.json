@@ -1,0 +1,34 @@
+{
+    "name": "nqt/crawler-otruyen",
+    "version": "1.0.0",
+    "description": "Laravel package: crawler cho OTruyen — Artisan + Backpack admin (auto-discover)",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "NQT"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "guzzlehttp/guzzle": "^7.8",
+        "laravel/framework": "^13.0"
+    },
+    "suggest": {
+        "backpack/crud": "Cần cho middleware admin mặc định của trang công cụ"
+    },
+    "autoload": {
+        "psr-4": {
+            "Nqt\\CrawlerOtruyen\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Nqt\\CrawlerOtruyen\\CrawlerOtruyenServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
