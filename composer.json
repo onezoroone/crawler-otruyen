@@ -1,6 +1,5 @@
 {
     "name": "nqt/crawler-otruyen",
-    "version": "1.0.1",
     "description": "Laravel package: crawler cho OTruyen — Artisan + Backpack admin (auto-discover)",
     "type": "library",
     "license": "MIT",
