@@ -3,6 +3,7 @@
 namespace Nqt\CrawlerOtruyen\Http\Controllers\Admin;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Validator;
@@ -14,23 +15,24 @@ use Nqt\CrawlerOtruyen\Services\CrawlerImportOptions;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 /**
- * Wizard 3 bước trên một trang — API JSON + jQuery.
- * Nguồn crawl: CrawlerSourceManager (config crawler-otruyen.default + sources).
+ * Wizard OTruyen — layout dùng chung: crawler-otruyen::wizard.layout.
+ * Plugin cào khác: route + view riêng (ví dụ crawler-truyenqq), vẫn gọi API crawler-otruyen.api.*.
  */
 class CrawlerWizardController extends Controller
 {
-    public function wizard(CrawlerSourceManager $manager, CrawlerImportOptions $importOptions): View
+    public function wizard(CrawlerSourceManager $manager, CrawlerImportOptions $importOptions): View|RedirectResponse
     {
-        $defaultId = (string) config('crawler-otruyen.default', 'otruyen');
-        $driver = $manager->driver($defaultId);
+        if (request()->query('source') === 'truyenqq') {
+            return redirect()->route('crawler-truyenqq.wizard');
+        }
 
-        return view('crawler-otruyen::wizard.app', [
+        $driver = $manager->driver('otruyen');
+
+        return view('crawler-otruyen::wizard.otruyen', [
             'defaultListUrl' => $driver->defaultListUrl(),
-            'crawlerSources' => $manager->labels(),
-            'defaultCrawlerSource' => $defaultId,
+            'defaultCrawlerSource' => 'otruyen',
             'defaultImportImageMode' => $importOptions->imageMode(),
             'defaultImportContentRewrite' => $importOptions->contentRewriteEnabled(),
-            /** URL API bước 1/2 — truyền từ controller để view giữ tên chung (dùng lại cho plugin cào khác). */
             'crawlWizardApiUrls' => [
                 'step1' => route('crawler-otruyen.api.step1'),
                 'step2' => route('crawler-otruyen.api.step2'),

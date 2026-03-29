@@ -1,17 +1,13 @@
 @extends(backpack_view('blank'))
 
-@php
-    $title = 'Crawler OTruyen';
-@endphp
-
 @section('header')
     <section class="container-fluid">
-        <h2>{{ $title }}</h2>
+        <h2>@yield('wizard_title')</h2>
     </section>
 @endsection
 
 @section('content')
-    {{-- Base wizard cào: id/class tiền tố crawl-wizard-* (không gắn tên plugin). Không dùng d-flex Bootstrap trên overlay (ghi đè display:none). --}}
+    {{-- Khung wizard dùng chung mọi plugin cào: id/class crawl-wizard-* --}}
     <div id="crawl-wizard-loading" class="position-fixed top-0 start-0 w-100 h-100 crawl-wizard-loading-overlay py-3"
          style="display: none; z-index: 1050; overflow-y: auto;"
          role="alert" aria-live="polite" aria-busy="false" data-loading-open="0">
@@ -31,85 +27,21 @@
 
     <div class="row">
         <div class="col-lg-11">
-            {{-- Bước 1 --}}
             <div id="wizard-panel-1" class="wizard-panel">
                 <div class="card shadow-sm">
                     <div class="card-body">
-                        @if ($errors->any())
-                            <div class="alert alert-danger">{{ $errors->first() }}</div>
-                        @endif
-
-                        <form id="form-crawl-wizard-step1" method="post" action="#" autocomplete="off">
-                            @csrf
-                            @if (count($crawlerSources ?? []) > 1)
-                                <div class="mb-4">
-                                    <label class="form-label" for="crawler_source">Nguồn crawl</label>
-                                    <select class="form-select" name="crawler_source" id="crawler_source">
-                                        @foreach ($crawlerSources as $id => $label)
-                                            <option value="{{ $id }}" @selected($id === ($defaultCrawlerSource ?? 'otruyen'))>{{ $label }}</option>
-                                        @endforeach
-                                    </select>
-                                    <div class="form-text">Đăng ký nguồn trong cấu hình (mảng <code>sources</code>) hoặc env <code>CRAWLER_SOURCE</code>.</div>
-                                </div>
-                            @else
-                                <input type="hidden" name="crawler_source" value="{{ $defaultCrawlerSource ?? 'otruyen' }}">
-                            @endif
-                            <div class="mb-4">
-                                <label class="form-label d-block">Chế độ</label>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="source_mode" id="source_mode_list" value="list" checked>
-                                    <label class="form-check-label" for="source_mode_list">1 — Lấy danh sách từ API</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="source_mode" id="source_mode_slug" value="slug">
-                                    <label class="form-check-label" for="source_mode_slug">2 — Nhập URL / slug truyện</label>
-                                </div>
-                            </div>
-
-                            <div id="panel-list" class="border rounded p-3 mb-4">
-                                <h5 class="mb-3">Danh sách API</h5>
-                                <div class="mb-3">
-                                    <label class="form-label" for="list_url">URL danh sách</label>
-                                    <input type="url" class="form-control" id="list_url" name="list_url"
-                                           value="{{ $defaultListUrl }}"
-                                           placeholder="https://otruyenapi.com/v1/api/danh-sach/truyen-moi">
-                                </div>
-                                <div class="row g-2">
-                                    <div class="col-md-3">
-                                        <label class="form-label" for="list_page_start">Trang bắt đầu</label>
-                                        <input type="number" class="form-control" id="list_page_start" name="list_page_start" min="1" value="1">
-                                    </div>
-                                    <div class="col-md-3">
-                                        <label class="form-label" for="list_page_end">Trang kết thúc</label>
-                                        <input type="number" class="form-control" id="list_page_end" name="list_page_end" min="1" value="1">
-                                    </div>
-                                    <div class="col-md-6 align-self-end">
-                                        <div class="form-text">~24 truyện / trang.</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div id="panel-slug" class="border rounded p-3 mb-4 d-none">
-                                <h5 class="mb-3">Slug / URL truyện</h5>
-                                <textarea class="form-control font-monospace" id="detail_urls" name="detail_urls" rows="8"
-                                          placeholder="https://otruyenapi.com/v1/api/truyen-tranh/ten-slug"></textarea>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary">Tiếp tục — chọn truyện</button>
-                            <a href="{{ backpack_url('dashboard') }}" class="btn btn-link">Dashboard</a>
-                        </form>
+                        @yield('wizard_step1')
                     </div>
                 </div>
             </div>
 
-            {{-- Bước 2 --}}
             <div id="wizard-panel-2" class="wizard-panel d-none">
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <form id="form-crawl-wizard-step2" method="post" action="#" autocomplete="off">
                             @csrf
                             <input type="hidden" name="crawler_source" id="form-crawl-wizard-source" value="{{ $defaultCrawlerSource ?? 'otruyen' }}">
-                            {{-- Tùy chọn ghi đè Settings cho lần import này --}}
+                            <input type="hidden" name="truyenqq_http_proxy" id="truyenqq_http_proxy_step2" value="">
                             <div class="card border mb-3">
                                 <div class="card-header py-2 small fw-semibold">Tùy chọn xử lý (lần import này)</div>
                                 <div class="card-body">
@@ -159,7 +91,6 @@
                 </div>
             </div>
 
-            {{-- Bước 3 --}}
             <div id="wizard-panel-3" class="wizard-panel d-none">
                 <div class="card border-success shadow-sm mb-3">
                     <div class="card-header">Tóm tắt</div>
@@ -180,7 +111,6 @@
 
 @push('before_styles')
     <style>
-        /* Lớp phủ loading: mờ + blur; flex chỉ áp dụng khi JS bật display:flex (tránh xung đột với Bootstrap d-flex) */
         .crawl-wizard-loading-overlay {
             background: rgba(15, 23, 42, 0.35);
             backdrop-filter: blur(4px);
@@ -221,8 +151,16 @@
 @endpush
 
 @push('after_scripts')
+    @stack('crawl_wizard_plugin_scripts')
     <script>
         jQuery(function ($) {
+            if (typeof window.crawlWizardSyncStep2Extras !== 'function') {
+                window.crawlWizardSyncStep2Extras = function () {};
+            }
+            if (typeof window.crawlWizardRestartExtras !== 'function') {
+                window.crawlWizardRestartExtras = function () {};
+            }
+
             var urls = @json($crawlWizardApiUrls ?? ['step1' => '', 'step2' => '']);
             var defaultListUrl = @json($defaultListUrl ?? '');
             var defaultCrawlerSource = @json($defaultCrawlerSource ?? 'otruyen');
@@ -234,10 +172,8 @@
             var $loadingText = $('#crawl-wizard-loading-text');
             var $btnStop = $('#btn-crawl-wizard-stop');
             var csrf = $('meta[name="csrf-token"]').attr('content');
-            /** Hành động hủy request đang chạy (fetch / $.ajax) */
             var crawlerCancelRequest = null;
 
-            /** Hiệu ứng loading overlay (fade + spinner pulse qua CSS) */
             function setLoading(show, text) {
                 if (text) {
                     $loadingText.text(text);
@@ -277,14 +213,12 @@
                 $('[data-step-badge="' + active + '"]').removeClass('bg-secondary').addClass('bg-primary');
             }
 
-            /** Chỉ đổi panel + URL cố định (không /step2 trong address bar) */
             function showPanel(step) {
                 var $panels = $('.wizard-panel');
                 var $next = $('#wizard-panel-' + step);
                 var $visible = $panels.filter(':visible').not($next);
 
                 function reveal() {
-                    // Gỡ inline display/opacity do jQuery fadeOut để lần sau không bị “trắng tinh” khi quay panel
                     $panels.stop(true, true).each(function () {
                         $(this).css({ opacity: '', display: '' });
                     });
@@ -343,6 +277,7 @@
                     if (res.crawler_source) {
                         $('#form-crawl-wizard-source').val(res.crawler_source);
                     }
+                    window.crawlWizardSyncStep2Extras();
                     showPanel(2);
                 }).fail(function (xhr, status) {
                     if (status === 'abort') {
@@ -366,7 +301,6 @@
                 showPanel(1);
             });
 
-            /** Màu theo trạng thái log (nền tối / nền sáng) */
             function logStateToClass(state, darkBg) {
                 var light = { pending: 'text-secondary', running: 'text-info', success: 'text-success', error: 'text-danger', warning: 'text-warning' };
                 var dark = { pending: 'text-secondary', running: 'text-info', success: 'text-success', error: 'text-danger', warning: 'text-warning' };
@@ -425,6 +359,8 @@
                 $streamWrap.addClass('d-none');
 
                 setLoading(true, 'Đang import truyện và chương (xem nhật ký bên dưới)…');
+
+                window.crawlWizardSyncStep2Extras();
 
                 var formEl = document.getElementById('form-crawl-wizard-step2');
                 var canStream = typeof window.fetch === 'function' && formEl && typeof window.ReadableStream === 'function';
@@ -553,6 +489,7 @@
                 if ($('#crawler_source').length) {
                     $('#crawler_source').val(defaultCrawlerSource);
                 }
+                window.crawlWizardRestartExtras();
                 syncCrawlWizardStep1Panels();
                 $('#manga-table-body').empty();
                 $('#step3-summary, #step3-log').empty();

@@ -29,8 +29,9 @@ class CrawlerImageStorageService
      * @param  string  $relativePath  Đường dẫn trên disk (vd: images/slug/cover.jpg)
      * @param  CrawlerImportOptions|null  $importOptions  Ghi đè theo lần import; null = inject mặc định
      * @param  bool  $applyResize  Bìa = true (theo Settings); ảnh chapter = false
+     * @param  string|null  $referer  Header Referer khi tải ảnh (vd: URL trang truyện / chapter)
      */
-    public function mirrorUrl(string $sourceUrl, string $relativePath, ?CrawlerImportOptions $importOptions = null, bool $applyResize = true): string
+    public function mirrorUrl(string $sourceUrl, string $relativePath, ?CrawlerImportOptions $importOptions = null, bool $applyResize = true, ?string $referer = null): string
     {
         $opt = $importOptions ?? $this->options;
         $mode = $opt->imageMode();
@@ -38,7 +39,7 @@ class CrawlerImageStorageService
             return $sourceUrl;
         }
 
-        $body = $this->fetchImageBody($sourceUrl, $this->maxDownloadAttempts());
+        $body = $this->fetchImageBody($sourceUrl, $this->maxDownloadAttempts(), $referer);
         if ($body === null) {
             Log::warning('Crawler: không tải được ảnh sau nhiều lần thử, giữ URL gốc.', ['url' => $sourceUrl]);
 
@@ -81,9 +82,10 @@ class CrawlerImageStorageService
      * Ảnh chương: tải song song (Guzzle Pool), không resize, retry tối đa theo config.
      *
      * @param  array<string, list<string>>  $imageServers
+     * @param  string|null  $referer  Header Referer cho mọi ảnh chapter (vd: URL trang đọc chapter)
      * @return array<string, list<string>>
      */
-    public function mirrorImageServers(array $imageServers, string $mangaSlug, float $chapterNumber, ?CrawlerImportOptions $importOptions = null): array
+    public function mirrorImageServers(array $imageServers, string $mangaSlug, float $chapterNumber, ?CrawlerImportOptions $importOptions = null, ?string $referer = null): array
     {
         $opt = $importOptions ?? $this->options;
         if ($opt->imageMode() === 'remote') {
@@ -122,9 +124,14 @@ class CrawlerImageStorageService
         $poolBodies = [];
         $client = $this->guzzleClient();
 
-        $requests = static function () use ($jobs) {
+        $requests = function () use ($jobs, $referer) {
             foreach ($jobs as $job) {
-                yield new Request('GET', $job['url']);
+                $headers = [];
+                if ($referer !== null && $referer !== '') {
+                    $headers['Referer'] = [$referer];
+                }
+
+                yield new Request('GET', $job['url'], $headers);
             }
         };
 
@@ -152,7 +159,7 @@ class CrawlerImageStorageService
             $i = $job['idx'];
             $body = $poolBodies[$i] ?? null;
             if ($body === null) {
-                $body = $this->fetchImageBody($job['url'], max(0, $maxAttempts - 1));
+                $body = $this->fetchImageBody($job['url'], max(0, $maxAttempts - 1), $referer);
             }
             if ($body === null) {
                 Log::warning('Crawler: chapter ảnh lỗi sau thử lại, giữ URL gốc.', ['url' => $job['url']]);
@@ -184,7 +191,7 @@ class CrawlerImageStorageService
     /**
      * Tải body ảnh — tối đa $maxAttempts lần (tuần tự, có chờ ngắn).
      */
-    protected function fetchImageBody(string $url, int $maxAttempts): ?string
+    protected function fetchImageBody(string $url, int $maxAttempts, ?string $referer = null): ?string
     {
         $maxAttempts = max(0, $maxAttempts);
         if ($maxAttempts === 0) {
@@ -192,10 +199,14 @@ class CrawlerImageStorageService
         }
 
         $client = $this->guzzleClient();
+        $extraHeaders = [];
+        if ($referer !== null && $referer !== '') {
+            $extraHeaders['Referer'] = $referer;
+        }
         $lastError = null;
         for ($a = 1; $a <= $maxAttempts; $a++) {
             try {
-                $response = $client->get($url);
+                $response = $client->get($url, $extraHeaders === [] ? [] : ['headers' => $extraHeaders]);
                 $code = $response->getStatusCode();
                 if ($code >= 200 && $code < 300) {
                     $body = (string) $response->getBody();
