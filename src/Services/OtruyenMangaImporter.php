@@ -281,16 +281,23 @@ class OtruyenMangaImporter
             ? implode(', ', $originRaw)
             : (string) $originRaw;
 
+        $attributes = [
+            'title' => (string) ($item['name'] ?? $slug),
+            'alternative_title' => $origin_name,
+            'description' => $description,
+            'cover_image' => $cover,
+            'status' => $status,
+            'last_chapter_at' => now(),
+        ];
+
+        $existing = Manga::query()->where('slug', $slug)->first();
+        if ($existing === null && (bool) config('crawler-otruyen.auto_publish_manga', true)) {
+            $attributes['published_at'] = now();
+        }
+
         return Manga::query()->updateOrCreate(
             ['slug' => $slug],
-            [
-                'title' => (string) ($item['name'] ?? $slug),
-                'alternative_title' => $origin_name,
-                'description' => $description,
-                'cover_image' => $cover,
-                'status' => $status,
-                'last_chapter_at' => now(),
-            ]
+            $attributes
         );
     }
 
@@ -480,12 +487,17 @@ class OtruyenMangaImporter
                         $newServerImages = $this->imageStorage->mirrorImageServers($newServerImages, (string) $manga->slug, $chapterNumber, $io);
 
                         $merged = is_array($existing?->image_servers) ? $existing->image_servers : [];
+                        $replaceEmpty = (int) ($existing?->pages_count ?? 0) < 1;
                         foreach ($newServerImages as $name => $urls) {
                             $urls = is_array($urls) ? $urls : [];
-                            if (! isset($merged[$name])) {
-                                $merged[$name] = [];
+                            if ($replaceEmpty) {
+                                $merged[$name] = $urls;
+                            } else {
+                                if (! isset($merged[$name])) {
+                                    $merged[$name] = [];
+                                }
+                                $merged[$name] = array_merge($merged[$name], $urls);
                             }
-                            $merged[$name] = array_merge($merged[$name], $urls);
                         }
 
                         $pages = 0;
@@ -561,6 +573,10 @@ class OtruyenMangaImporter
     protected function chapterAlreadyHasServerImages(?Chapter $chapter, string $serverName): bool
     {
         if ($chapter === null) {
+            return false;
+        }
+        // pages_count = 0: coi như chưa có ảnh hợp lệ (cho phép import lại).
+        if ((int) ($chapter->pages_count ?? 0) < 1) {
             return false;
         }
         $servers = $chapter->image_servers;

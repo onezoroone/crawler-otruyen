@@ -21,6 +21,12 @@ return [
     /** OTruyen: URL danh sách mặc định (chỉ dùng khi driver otruyen / tương thích) */
     'list_url_default' => 'https://otruyenapi.com/v1/api/danh-sach/truyen-moi',
 
+    /**
+     * Truyện mới từ crawler: gán published_at = now() để hiển thị công khai (đồng bộ với scope published).
+     * Tắt: env CRAWLER_AUTO_PUBLISH_MANGA=false — admin set published_at tay trong Backpack.
+     */
+    'auto_publish_manga' => filter_var(env('CRAWLER_AUTO_PUBLISH_MANGA', true), FILTER_VALIDATE_BOOL),
+
     'http_timeout' => 40,
 
     'user_agent' => 'TruyenApp-CrawlerOtruyen/1.0',
